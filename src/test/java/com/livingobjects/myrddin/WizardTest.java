@@ -12,17 +12,17 @@ public class WizardTest {
 
     @Test
     public void testGenerateSpecificationCosmos() throws IOException {
-        File ramlFile = new File(getClass().getResource("/cosmos.api").getPath());
+        File ramlFile = new File(getClass().getResource("/test.api").getPath());
         ApiSpecification spec = tested.generateSpecification(ramlFile);
-        Assert.assertEquals("Cosmos API", spec.title);
-        Assert.assertEquals("Network topology API", spec.description);
+        Assert.assertEquals("Test API", spec.title);
+        Assert.assertEquals("Testing API", spec.description);
         Assert.assertEquals("1", spec.version);
 
         Assert.assertEquals(1, spec.resources.size());
         ApiResource apiResource = spec.resources.get(0);
-        Assert.assertEquals("/topology/domains", apiResource.uri);
+        Assert.assertEquals("/test/domains", apiResource.uri);
         Assert.assertEquals("GET", apiResource.method);
-        Assert.assertEquals("doormanAuthentication", apiResource.security.get(0).securityScheme);
+        Assert.assertEquals("privateAuthentication", apiResource.security.get(0).securityScheme);
 
         Assert.assertEquals(2, spec.models.size());
         Assert.assertEquals(1, spec.securitySchemes.size());
