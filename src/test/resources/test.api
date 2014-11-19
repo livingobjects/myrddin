@@ -1,0 +1,71 @@
+# this is an example of the Uber API
+# as a demonstration of an API spec in YAML
+swagger: '2.0'
+info:
+  title: Test API
+  description: Testing API
+  version: "1"
+# the domain of the service
+host: testing.test.com
+# array of all schemes that your API supports
+schemes:
+  - http
+# will be prefixed to all paths
+basePath: /test
+produces:
+  - application/json
+paths:
+  /domains:
+    get:
+      summary: Get the list of available Domain
+      description: |
+        The Domains are the top level elements.
+      security:
+        - privateAuthentication:
+          - test:read
+      parameters:
+        - name: test
+          in: body
+          description: The pet JSON you want to post
+          schema:
+            $ref: '#/definitions/Domain'
+          required: true
+      responses:
+        200:
+          description: An array of domains
+          schema:
+            type: array
+            items:
+              $ref: Domain
+        default:
+          description: Unexpected error
+          schema:
+            $ref: Error
+
+securityDefinitions:
+  doormanAuthentication:
+    type: apiKey
+    name: prv_token
+    in: header
+
+definitions:
+  Domain:
+    properties:
+      id:
+        type: number
+        description: Unique identifier representing a specific domain.
+      code:
+        type: string
+        description: The unique code of the Domain node.
+      name:
+        type: string
+        description: The display name of the Domain.
+  Error:
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+      fields:
+        type: string
