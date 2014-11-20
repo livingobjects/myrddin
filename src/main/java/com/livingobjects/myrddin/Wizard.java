@@ -1,50 +1,52 @@
 package com.livingobjects.myrddin;
 
 import com.google.common.collect.ImmutableList;
+import com.livingobjects.myrddin.exception.*;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.error.YAMLException;
 
-import java.io.*;
+import java.io.InputStream;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Wizard {
 
+    @SuppressWarnings("unchecked")
+    public ApiSpecification generateSpecification(InputStream apiSpecification) throws SwaggerException {
+        Yaml yaml = new Yaml();
+        try {
+            Object global = yaml.loadAs(apiSpecification, Map.class);
+            if (global != null) {
+                Map<String, Object> map = (Map<String, Object>) global;
+                String basePath = (String) map.get("basePath");
 
-    public ApiSpecification generateSpecification(File apiSpecification) throws IOException {
-        try (InputStream in = new FileInputStream(apiSpecification)) {
-            return generateSpecification(in);
+                Map<String, Object> paths = readInnerMap(map, "paths", true);
+                ImmutableList<ApiResource> resources = readApiResources(basePath, paths);
+
+                Map<String, Object> info = readInnerMap(map, "info", true);
+                String title = readInnerField(Optional.of("info"), info, "title", String.class, true);
+                String description = readInnerField(Optional.of("info"), info, "description", String.class, true);
+                String version = readInnerField(Optional.of("info"), info, "version", String.class, true);
+
+                Map<String, Object> definitions = readInnerMap(map, "definitions", false);
+                ImmutableList<Schema> models = readApiModels(definitions);
+
+                ImmutableList<SecurityScheme> securitySchemes = readSecuritySchemes(readInnerMap(map, "securityDefinitions", false));
+
+                return new ApiSpecification(title, description, version, resources, models, securitySchemes);
+            } else {
+                throw new SwaggerInvalidFormatException(Optional.empty(), "Yaml", "Map");
+            }
+        } catch (YAMLException e) {
+            throw new SwaggerYamlException(e);
         }
     }
 
-    public ApiSpecification generateSpecification(InputStream apiSpecification) throws FileNotFoundException {
-        Yaml yaml = new Yaml();
-
-        Map<String, Object> map = yaml.loadAs(apiSpecification, Map.class);
-
-        String basePath = (String) map.get("basePath");
-
-        Map<String, Object> paths = (Map<String, Object>) map.get("paths");
-        ImmutableList<ApiResource> resources = readApiResources(basePath, paths);
-
-        Map<String, Object> info = (Map<String, Object>) map.get("info");
-        String title = (String) info.get("title");
-        String description = (String) info.get("description");
-        String version = (String) info.get("version");
-
-        Map<String, Object> definitions = (Map<String, Object>) map.get("definitions");
-        ImmutableList<Schema> models = readApiModels(definitions);
-
-        ImmutableList<SecurityScheme> securitySchemes = readSecuritySchemes((Map<String, Object>) map.get("securityDefinitions"));
-
-        return new ApiSpecification(title, description, version, resources, models, securitySchemes);
-    }
-
-    private ImmutableList<SecurityScheme> readSecuritySchemes(Map<String, Object> securityDefinitions) {
+    private ImmutableList<SecurityScheme> readSecuritySchemes(Map<String, Object> securityDefinitions) throws SwaggerMissingChildException {
         LinkedList<SecurityScheme> securitySchemes = new LinkedList<>();
         if (securityDefinitions != null) {
             for (Map.Entry<String, Object> entry : securityDefinitions.entrySet()) {
                 String title = entry.getKey();
-                Map<String, Object> properties = (Map<String, Object>) entry.getValue();
+                Map<String, Object> properties = readMap(title, entry.getValue());
                 String type = (String) properties.get("type");
                 String in = (String) properties.get("in");
                 String name = (String) properties.get("name");
@@ -54,31 +56,59 @@ public class Wizard {
         return ImmutableList.copyOf(securitySchemes);
     }
 
-    private ImmutableList<ApiResource> readApiResources(String basePath, Map<String, Object> paths) {
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readMap(String title, Object value) throws SwaggerMissingChildException {
+        if (value != null) {
+            if (value instanceof Map) {
+                return (Map<String, Object>) value;
+            } else {
+                throw new SwaggerMissingChildException(title);
+            }
+        } else {
+            throw new SwaggerMissingChildException(title);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> readList(String title, Object value) throws SwaggerMissingChildException {
+        if (value != null) {
+            if (value instanceof List) {
+                return (List<String>) value;
+            } else {
+                throw new SwaggerMissingChildException(title);
+            }
+        } else {
+            throw new SwaggerMissingChildException(title);
+        }
+    }
+
+    private ImmutableList<ApiResource> readApiResources(String basePath, Map<String, Object> paths) throws SwaggerException {
         LinkedList<ApiResource> resources = new LinkedList<>();
         if (paths != null) {
             for (Map.Entry<String, Object> pathEntry : paths.entrySet()) {
-                generateDocumentationForResource(resources, basePath, pathEntry.getKey(), (Map<String, Object>) pathEntry.getValue());
+                String path = pathEntry.getKey();
+                generateDocumentationForResource(resources, basePath, path, readMap(path, pathEntry.getValue()));
             }
         }
         return ImmutableList.copyOf(resources);
     }
 
-    private ImmutableList<Schema> readApiModels(Map<String, Object> models) {
+    private ImmutableList<Schema> readApiModels(Map<String, Object> models) throws SwaggerException {
         LinkedList<Schema> schemas = new LinkedList<>();
         if (models != null) {
             for (Map.Entry<String, Object> modelEntry : models.entrySet()) {
                 String title = modelEntry.getKey();
-                Map<String, Object> properties = (Map<String, Object>) modelEntry.getValue();
-                Optional<String> description = Optional.ofNullable((String) properties.get("description"));
-                Schema schema = Schema.object(Optional.ofNullable(title), description, readSchemaProperties((Map<String, Object>) properties.get("properties")));
+                Map<String, Object> properties = readMap(title, modelEntry.getValue());
+                Optional<String> description = readOptionalString(properties, "description");
+                Map<String, Object> propertiesMap = readInnerMap(Optional.of(title), properties, "properties");
+                Schema schema = Schema.object(Optional.ofNullable(title), description, readSchemaProperties(propertiesMap));
                 schemas.add(schema);
             }
         }
         return ImmutableList.copyOf(schemas);
     }
 
-    private void generateDocumentationForResource(LinkedList<ApiResource> resources, String parentUri, String currentUri, Map<String, Object> properties) {
+    private void generateDocumentationForResource(LinkedList<ApiResource> resources, String parentUri, String currentUri, Map<String, Object> properties) throws SwaggerException {
         String uri;
         if (parentUri != null) {
             uri = parentUri + currentUri;
@@ -87,6 +117,7 @@ public class Wizard {
         }
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
             String value = entry.getKey();
+            Map<String, Object> resourceProperties = readMap(value, entry.getValue());
             switch (value.toUpperCase()) {
                 case "HEAD":
                 case "DELETE":
@@ -95,29 +126,30 @@ public class Wizard {
                 case "GET":
                 case "PUT":
                 case "POST":
-                    Map<String, Object> resourceProperties = (Map<String, Object>) properties.get(value);
-                    ImmutableList<Response> responses = readResponses((Map<String, Object>) resourceProperties.get("responses"));
-                    ImmutableList<Parameter> parameters = readParameters((List<Map<String, Object>>) resourceProperties.get("parameters"));
+                    Map<String, Object> responsesMap = readInnerMap(Optional.of(value), resourceProperties, "responses");
+                    ImmutableList<Response> responses = readResponses(responsesMap);
+                    List<Map<String, Object>> parametersMap = readInnerList(Optional.of(value), resourceProperties, "parameters", false);
+                    ImmutableList<Parameter> parameters = readParameters(value, parametersMap);
                     String summary = (String) resourceProperties.get("summary");
-                    Optional<String> description = Optional.ofNullable((String) resourceProperties.get("description"));
-                    List<Map<String, Object>> securityList = (List<Map<String, Object>>) resourceProperties.get("security");
+                    Optional<String> description = readOptionalString(resourceProperties, "description");
+                    List<Map<String, Object>> securityList = readInnerList(Optional.of(value), resourceProperties, "security", false);
                     ImmutableList<Security> security = readSecurity(securityList);
                     ApiResource resource = new ApiResource(uri, value.toUpperCase(), summary, description, security, parameters, responses);
                     resources.add(resource);
                     break;
                 default:
-                    generateDocumentationForResource(resources, uri, value, (Map<String, Object>) entry.getValue());
+                    generateDocumentationForResource(resources, uri, value, resourceProperties);
             }
         }
     }
 
-    private ImmutableList<Security> readSecurity(List<Map<String, Object>> securityList) {
+    private ImmutableList<Security> readSecurity(List<Map<String, Object>> securityList) throws SwaggerMissingChildException {
         List<Security> list = new ArrayList<>();
         if (securityList != null) {
             for (Map<String, Object> properties : securityList) {
                 for (Map.Entry<String, Object> entry : properties.entrySet()) {
                     String scheme = entry.getKey();
-                    List<String> roles = (List<String>) entry.getValue();
+                    List<String> roles = readList(scheme, entry.getValue());
                     list.add(new Security(scheme, ImmutableList.copyOf(roles)));
                 }
             }
@@ -125,14 +157,14 @@ public class Wizard {
         return ImmutableList.copyOf(list);
     }
 
-    private ImmutableList<Parameter> readParameters(List<Map<String, Object>> parametersList) {
+    private ImmutableList<Parameter> readParameters(String parent, List<Map<String, Object>> parametersList) throws SwaggerException {
         if (parametersList != null) {
             LinkedList<Parameter> parameters = new LinkedList<>();
             for (Map<String, Object> properties : parametersList) {
                 String name = (String) properties.get("name");
                 String in = (String) properties.get("in");
                 String description = (String) properties.get("description");
-                Map<String, Object> schemaProperties = (Map<String, Object>) properties.get("schema");
+                Map<String, Object> schemaProperties = readInnerMap(Optional.of(parent), properties, "schema", false);
                 if (schemaProperties == null) {
                     schemaProperties = properties;
                 }
@@ -149,14 +181,14 @@ public class Wizard {
         }
     }
 
-    private Schema readSchema(Map<String, Object> propertiesMap) {
+    private Schema readSchema(Map<String, Object> propertiesMap) throws SwaggerException {
         return readSchema(null, propertiesMap);
     }
 
-    private Schema readSchema(String definitionTitle, Map<String, Object> propertiesMap) {
+    private Schema readSchema(String definitionTitle, Map<String, Object> propertiesMap) throws SwaggerException {
         Schema schema;
         String reference = (String) propertiesMap.get("$ref");
-        Optional<String> description = Optional.ofNullable((String) propertiesMap.get("description"));
+        Optional<String> description = readOptionalString(propertiesMap, "description");
         if (reference != null) {
             schema = Schema.reference(Optional.empty(), description, reference);
         } else {
@@ -167,51 +199,92 @@ public class Wizard {
             String type = (String) propertiesMap.get("type");
             switch (type) {
                 case "array":
-                    schema = Schema.array(title, description, readSchema((Map<String, Object>) propertiesMap.get("items")));
+                    schema = Schema.array(title, description, readSchema(readInnerMap(title, propertiesMap, "items")));
                     break;
                 case "object":
-                    schema = Schema.object(title, description, readSchemaProperties((Map<String, Object>) propertiesMap.get("properties")));
+                    schema = Schema.object(title, description, readSchemaProperties(readInnerMap(title, propertiesMap, "properties")));
                     break;
                 default:
-                    schema = Schema.scalar(title, description, type, (String) propertiesMap.get("format"));
+                    schema = Schema.scalar(title, description, type, readOptionalString(propertiesMap, "format"));
                     break;
             }
         }
         return schema;
     }
 
-    private ImmutableList<Property> readSchemaProperties(Map<String, Object> properties) {
+    private ImmutableList<Property> readSchemaProperties(Map<String, Object> properties) throws SwaggerException {
         if (properties != null) {
-            List<Property> schemas = properties.entrySet().stream().map(e -> {
+            List<Property> schemas = new ArrayList<>();
+            for (Map.Entry<String, Object> e : properties.entrySet()) {
                 String name = e.getKey();
-                Map<String, Object> map = (Map<String, Object>) e.getValue();
-                return new Property(name, readSchema(map));
-            }).collect(Collectors.toList());
+                Map<String, Object> map = readMap(name, e.getValue());
+                schemas.add(new Property(name, readSchema(map)));
+            }
             return ImmutableList.copyOf(schemas);
         } else {
             return ImmutableList.of();
         }
     }
 
-    private ImmutableList<Response> readResponses(Map<String, Object> responsesMap) {
+    private ImmutableList<Response> readResponses(Map<String, Object> responsesMap) throws SwaggerException {
         LinkedList<Response> responses = new LinkedList<>();
         for (Map.Entry<String, Object> entry : responsesMap.entrySet()) {
             String code = String.valueOf(entry.getKey());
-            responses.add(readResponse(code, (Map<String, Object>) entry.getValue()));
+            responses.add(readResponse(code, readMap(code, entry.getValue())));
         }
         return ImmutableList.copyOf(responses);
     }
 
-    private Response readResponse(String code, Map<String, Object> properties) {
+    private Response readResponse(String code, Map<String, Object> properties) throws SwaggerException {
         String description = (String) properties.get("description");
         Optional<Schema> schema;
-        Map<String, Object> schemaMap = (Map<String, Object>) properties.get("schema");
+        Map<String, Object> schemaMap = readInnerMap(Optional.ofNullable(code), properties, "schema", false);
         if (schemaMap != null) {
             schema = Optional.ofNullable(readSchema(schemaMap));
         } else {
             schema = Optional.empty();
         }
         return new Response(code, Optional.ofNullable(description), schema);
+    }
+
+    private Map<String, Object> readInnerMap(Map<String, Object> properties, String property, boolean required) throws SwaggerException {
+        return readInnerMap(Optional.empty(), properties, property, required);
+    }
+
+    private Map<String, Object> readInnerMap(Optional<String> parent, Map<String, Object> properties, String property) throws SwaggerException {
+        return readInnerMap(parent, properties, property, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readInnerMap(Optional<String> parent, Map<String, Object> properties, String property, boolean required) throws SwaggerException {
+        return readInnerField(parent, properties, property, Map.class, required);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T readInnerField(Optional<String> parent, Map<String, Object> properties, String property, Class<T> clazz, boolean required) throws SwaggerException {
+        Object value = properties.get(property);
+        if (value != null) {
+            if (clazz.isInstance(value)) {
+                return clazz.cast(value);
+            } else {
+                throw new SwaggerInvalidFormatException(parent, property, clazz.getSimpleName());
+            }
+        } else {
+            if (required) {
+                throw new SwaggerMissingFieldException(parent, property);
+            } else {
+                return null;
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> readInnerList(Optional<String> parent, Map<String, Object> properties, String property, boolean required) throws SwaggerException {
+        return readInnerField(parent, properties, property, List.class, required);
+    }
+
+    private Optional<String> readOptionalString(Map<String, Object> properties, String property) {
+        return Optional.ofNullable((String) properties.get(property));
     }
 
 }
