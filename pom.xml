@@ -6,12 +6,12 @@
     <parent>
         <groupId>com.livingobjects</groupId>
         <artifactId>livingobjects-oss-parent</artifactId>
-        <version>2-SNAPSHOT</version>
+        <version>2</version>
     </parent>
 
     <groupId>com.livingobjects.myrddin</groupId>
     <artifactId>myrddin</artifactId>
-    <version>1.2-SNAPSHOT</version>
+    <version>1.2</version>
 
     <packaging>bundle</packaging>
 
