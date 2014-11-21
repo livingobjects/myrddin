@@ -1,6 +1,7 @@
 package com.livingobjects.myrddin;
 
 import com.google.common.collect.ImmutableList;
+import com.livingobjects.myrddin.exception.SwaggerInvalidTypeException;
 
 import java.util.Optional;
 
@@ -18,9 +19,12 @@ public abstract class Schema {
         this.description = description;
     }
 
-    public static SchemaScalar scalar(Optional<String> title, Optional<String> description, String type, String format) {
+    public static SchemaScalar scalar(Optional<String> title, Optional<String> description, String type, Optional<String> format) throws SwaggerInvalidTypeException {
         SchemaTypes schemaType = SchemaTypes.of(type);
-        return new SchemaScalar(title, description, schemaType, Optional.ofNullable(format));
+        if (schemaType == null) {
+            throw new SwaggerInvalidTypeException(title.get(), type);
+        }
+        return new SchemaScalar(title, description, schemaType, format);
     }
 
     public static SchemaObject object(Optional<String> title, Optional<String> description, ImmutableList<Property> properties) {
