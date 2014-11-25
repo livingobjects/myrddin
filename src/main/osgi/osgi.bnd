@@ -1,2 +1,2 @@
-Private-Package: com.livingobjects.myrddin, com.livingobjects.myrddin.exception
+Private-Package: com.livingobjects.myrddin, com.livingobjects.myrddin.schema, com.livingobjects.myrddin.exception
 

@@ -1,5 +1,7 @@
 package com.livingobjects.myrddin;
 
+import com.livingobjects.myrddin.schema.Schema;
+
 import java.util.Optional;
 
 public final class Response {

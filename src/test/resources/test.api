@@ -28,7 +28,10 @@ paths:
           in: body
           description: The pet JSON you want to post
           schema:
-            $ref: '#/definitions/Domain'
+            oneOf:
+              - $ref: '#/definitions/Domain'
+              - type: string
+                format: "domain:int64"
           required: true
       responses:
         200:
@@ -41,6 +44,14 @@ paths:
           description: Unexpected error
           schema:
             $ref: Error
+    /{domainId}:
+      post:
+        summary: Modify a domain
+        responses:
+          default:
+            description: Unexpected error
+            schema:
+              $ref: '#/definitions/Error'
 
 securityDefinitions:
   doormanAuthentication:
@@ -60,6 +71,33 @@ definitions:
       name:
         type: string
         description: The display name of the Domain.
+      kpi:
+        oneOf:
+          - $ref: '#/definitions/Kpi'
+          - type: string
+            format: "kpi:int64"
+    required:
+      - id
+      - code
+      - name
+
+  Kpi:
+    properties:
+      name:
+        type: string
+        description: The name of the kpi.
+      formula:
+        anyOf:
+          - type: string
+            description: Formula
+          - $ref: '#/definitions/Formula'
+
+  Formula:
+    properties:
+      name:
+        type: string
+        description: Desc of the formula.
+
   Error:
     properties:
       code:

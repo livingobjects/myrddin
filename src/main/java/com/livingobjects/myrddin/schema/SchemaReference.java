@@ -1,4 +1,4 @@
-package com.livingobjects.myrddin;
+package com.livingobjects.myrddin.schema;
 
 import java.util.Optional;
 
