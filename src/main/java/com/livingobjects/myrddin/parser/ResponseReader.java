@@ -16,7 +16,7 @@ public class ResponseReader implements YamlReader {
         Optional<Schema> schema;
         Map<String, Object> schemaMap = readInnerMap(Optional.of(code), properties, "schema", false);
         if (schemaMap != null) {
-            schema = Optional.ofNullable(schemaReader.read("schema", schemaMap));
+            schema = Optional.ofNullable(schemaReader.read(Optional.of(code), Optional.empty(), schemaMap));
         } else {
             schema = Optional.empty();
         }

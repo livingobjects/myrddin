@@ -10,14 +10,14 @@ import java.util.*;
 
 public class SchemaReader implements YamlReader {
 
-    public Schema read(String definitionTitle, Map<String, Object> propertiesMap) throws SwaggerException {
-        return read(Optional.of(definitionTitle), propertiesMap);
+    public Schema read(String parent, Optional<String> definitionTitle, Map<String, Object> propertiesMap) throws SwaggerException {
+        return read(Optional.of(parent), definitionTitle, propertiesMap);
     }
 
-    public Schema read(Optional<String> definitionTitle, Map<String, Object> propertiesMap) throws SwaggerException {
+    public Schema read(Optional<String> parent, Optional<String> definitionTitle, Map<String, Object> propertiesMap) throws SwaggerException {
         Schema schema;
         String reference = (String) propertiesMap.get("$ref");
-        Optional<String> description = readOptionalString(definitionTitle, propertiesMap, "description");
+        Optional<String> description = readOptionalString(parent, propertiesMap, "description");
         if (reference != null) {
             schema = Schema.reference(Optional.empty(), description, reference);
         } else {
@@ -29,34 +29,34 @@ public class SchemaReader implements YamlReader {
             if (type != null) {
                 switch (type) {
                     case "array":
-                        schema = Schema.array(title, description, read(type, readInnerMap(title, propertiesMap, "items")));
+                        schema = Schema.array(title, description, read(type, Optional.empty(), readInnerMap(title, propertiesMap, "items")));
                         break;
                     case "object":
-                        schema = readSchemaObject(definitionTitle, title, description, propertiesMap);
+                        schema = readSchemaObject(parent, title, description, propertiesMap);
                         break;
                     case "string":
-                        schema = readSchemaString(definitionTitle, title, description, propertiesMap);
+                        schema = readSchemaString(parent, title, description, propertiesMap);
                         break;
                     case "boolean":
                         schema = Schema.bool(title, description);
                         break;
                     case "integer":
                     case "number":
-                        schema = readSchemaNumber(definitionTitle, title, description, propertiesMap);
+                        schema = readSchemaNumber(parent, title, description, propertiesMap);
                         break;
                     default:
-                        throw new SwaggerInvalidTypeException(definitionTitle, type);
+                        throw new SwaggerInvalidTypeException(parent, type);
                 }
             } else {
-                Optional<ImmutableList<Map<String, Object>>> anyOf = readOptionalInnerList(definitionTitle, propertiesMap, "anyOf");
+                Optional<ImmutableList<Map<String, Object>>> anyOf = readOptionalInnerList(parent, propertiesMap, "anyOf");
                 if (anyOf.isPresent()) {
-                    schema = Schema.anyOf(title, description, readSchemaList(anyOf.get()));
+                    schema = Schema.anyOf(title, description, readSchemaList(parent, anyOf.get()));
                 } else {
-                    Optional<ImmutableList<Map<String, Object>>> oneOf = readOptionalInnerList(definitionTitle, propertiesMap, "oneOf");
+                    Optional<ImmutableList<Map<String, Object>>> oneOf = readOptionalInnerList(parent, propertiesMap, "oneOf");
                     if (oneOf.isPresent()) {
-                        schema = Schema.oneOf(title, description, readSchemaList(oneOf.get()));
+                        schema = Schema.oneOf(title, description, readSchemaList(parent, oneOf.get()));
                     } else {
-                        throw new SwaggerInvalidTypeException(definitionTitle, "undefined");
+                        throw new SwaggerInvalidTypeException(parent, "undefined");
                     }
                 }
             }
@@ -65,10 +65,10 @@ public class SchemaReader implements YamlReader {
     }
 
     @SuppressWarnings("unchecked")
-    public ImmutableList<Schema> readSchemaList(ImmutableList<Map<String, Object>> list) throws SwaggerException {
+    public ImmutableList<Schema> readSchemaList(Optional<String> parent, ImmutableList<Map<String, Object>> list) throws SwaggerException {
         LinkedList<Schema> schemas = new LinkedList<>();
         for (Map<String, Object> map : list) {
-            schemas.add(read(Optional.empty(), map));
+            schemas.add(read(parent, Optional.empty(), map));
         }
         return ImmutableList.copyOf(schemas);
     }
@@ -97,17 +97,17 @@ public class SchemaReader implements YamlReader {
         ImmutableList<String> required = readStringList(propertyName, propertiesMap, "required");
         Map<String, Object> properties = readInnerMap(propertyName, propertiesMap, "properties");
         ImmutableList<Map<String, Object>> definitionsList = readInnerList(propertyName, propertiesMap, "definitions");
-        ImmutableList<Schema> definitions = readSchemaList(definitionsList);
-        return Schema.object(title, description, readSchemaProperties(properties), required, definitions);
+        ImmutableList<Schema> definitions = readSchemaList(propertyName, definitionsList);
+        return Schema.object(title, description, readSchemaProperties(propertyName, properties), required, definitions);
     }
 
-    private ImmutableList<Property> readSchemaProperties(Map<String, Object> properties) throws SwaggerException {
+    private ImmutableList<Property> readSchemaProperties(Optional<String> propertyName, Map<String, Object> properties) throws SwaggerException {
         if (properties != null) {
             List<Property> schemas = new ArrayList<>();
             for (Map.Entry<String, Object> e : properties.entrySet()) {
                 String name = e.getKey();
                 Map<String, Object> map = readMap(name, e.getValue());
-                schemas.add(new Property(name, read(Optional.empty(), map)));
+                schemas.add(new Property(name, read(propertyName, Optional.empty(), map)));
             }
             return ImmutableList.copyOf(schemas);
         } else {

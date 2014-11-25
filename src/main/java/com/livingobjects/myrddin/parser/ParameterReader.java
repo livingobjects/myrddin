@@ -18,7 +18,7 @@ public class ParameterReader implements YamlReader {
             schemaProperties = properties;
         }
         SchemaReader schemaReader = new SchemaReader();
-        Schema schema = schemaReader.read(propertyName, schemaProperties);
+        Schema schema = schemaReader.read(propertyName, Optional.empty(), schemaProperties);
         Boolean required = (Boolean) properties.get("required");
         if (required == null) {
             required = false;
