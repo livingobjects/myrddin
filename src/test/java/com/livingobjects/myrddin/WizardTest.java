@@ -89,6 +89,7 @@ public class WizardTest {
             Assert.assertEquals("Must be filled", spec.description);
             Assert.assertEquals("1.0.0", spec.version);
             Assert.assertEquals(4, spec.resources.size());
+            Assert.assertEquals("/pet", spec.resources.get(0).uri);
             Assert.assertEquals(1, spec.definitions.size());
         }
     }

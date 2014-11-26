@@ -4,9 +4,8 @@ info:
   title: PetStore on Heroku
   description: Must be filled
 host: petstore-api.herokuapp.com
-basePath: /pet
 paths:
-  /:
+  /pet:
     get:
       responses:
         200:
@@ -33,7 +32,7 @@ paths:
       responses:
         200:
           description: Updates the pet
-  /{petId}:
+  /pet/{petId}:
     get:
       parameters:
         - name: petId
