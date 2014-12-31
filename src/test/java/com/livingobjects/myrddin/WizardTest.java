@@ -5,7 +5,6 @@ import com.livingobjects.myrddin.schema.Schema;
 import com.livingobjects.myrddin.schema.SchemaObject;
 import com.livingobjects.myrddin.schema.SchemaOneOf;
 import com.livingobjects.myrddin.schema.SchemaTypes;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
@@ -38,32 +37,26 @@ public class WizardTest {
 
             assertThat(apiResource.security.get(0).securityScheme).isEqualTo("privateAuthentication");
 
-            Assert.assertEquals(4, spec.definitions.size());
+            assertThat(spec.definitions).hasSize(4);
 
             Schema schema = spec.definitions.get(0);
-            if (schema instanceof SchemaObject) {
-                SchemaObject object = (SchemaObject) schema;
-                assertThat(object.type).isEqualTo(SchemaTypes.OBJECT);
-                assertThat(object.properties).hasSize(4);
-                assertThat(object.required).hasSize(3);
+            SchemaObject object = (SchemaObject) schema;
+            assertThat(object.type).isEqualTo(SchemaTypes.OBJECT);
+            assertThat(object.properties).hasSize(4);
+            assertThat(object.required).hasSize(3);
 
-                assertThat(object.required.get(0)).isEqualTo("id");
-                assertThat(object.required.get(1)).isEqualTo("code");
-                assertThat(object.required.get(2)).isEqualTo("name");
+            assertThat(object.required.get(0)).isEqualTo("id");
+            assertThat(object.required.get(1)).isEqualTo("code");
+            assertThat(object.required.get(2)).isEqualTo("name");
 
-                Property thirdProp = object.properties.get(3);
-                assertThat(thirdProp.name).isEqualTo("kpi");
-                Schema oneOfSchema = thirdProp.schema;
-                if (oneOfSchema instanceof SchemaOneOf) {
-                    SchemaOneOf oneOf = (SchemaOneOf) oneOfSchema;
-                    assertThat(oneOf.type).isEqualTo(SchemaTypes.ONE_OF);
-                    assertThat(oneOf.types).hasSize(2);
-                    assertThat(oneOf.types.get(0).type).isEqualTo(SchemaTypes.REF);
-                    assertThat(oneOf.types.get(1).type).isEqualTo(SchemaTypes.STRING);
-                } else {
-                    Assert.fail("3rd definition is not of type OneOf!");
-                }
-            }
+            Property thirdProp = object.properties.get(3);
+            assertThat(thirdProp.name).isEqualTo("kpi");
+            Schema oneOfSchema = thirdProp.schema;
+            SchemaOneOf oneOf = (SchemaOneOf) oneOfSchema;
+            assertThat(oneOf.type).isEqualTo(SchemaTypes.ONE_OF);
+            assertThat(oneOf.types).hasSize(2);
+            assertThat(oneOf.types.get(0).type).isEqualTo(SchemaTypes.REF);
+            assertThat(oneOf.types.get(1).type).isEqualTo(SchemaTypes.STRING);
 
             assertThat(spec.securitySchemes).hasSize(1);
         }
