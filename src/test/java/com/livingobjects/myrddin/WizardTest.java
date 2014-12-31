@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class WizardTest {
 
     Wizard tested = new Wizard();
@@ -21,49 +23,49 @@ public class WizardTest {
         File swaggerFile = new File(getClass().getResource("/test.api").getPath());
         try (FileInputStream in = new FileInputStream(swaggerFile)) {
             ApiSpecification spec = tested.generateSpecification(in);
-            Assert.assertEquals("Test API", spec.title);
-            Assert.assertEquals("Testing API", spec.description);
-            Assert.assertEquals("1", spec.version);
+            assertThat(spec.title).isEqualTo("Test API");
+            assertThat(spec.description).isEqualTo("Testing API");
+            assertThat(spec.version).isEqualTo("1");
 
-            Assert.assertEquals(2, spec.resources.size());
+            assertThat(spec.resources).hasSize(2);
             ApiResource apiResource = spec.resources.get(0);
-            Assert.assertEquals("/test/domains", apiResource.uri);
-            Assert.assertEquals("GET", apiResource.method);
+            assertThat(apiResource.uri).isEqualTo("/test/domains");
+            assertThat(apiResource.method).isEqualTo("GET");
 
             ApiResource apiResource2 = spec.resources.get(1);
-            Assert.assertEquals("/test/domains/{domainId}", apiResource2.uri);
-            Assert.assertEquals("POST", apiResource2.method);
+            assertThat(apiResource2.uri).isEqualTo("/test/domains/{domainId}");
+            assertThat(apiResource2.method).isEqualTo("POST");
 
-            Assert.assertEquals("privateAuthentication", apiResource.security.get(0).securityScheme);
+            assertThat(apiResource.security.get(0).securityScheme).isEqualTo("privateAuthentication");
 
             Assert.assertEquals(4, spec.definitions.size());
 
             Schema schema = spec.definitions.get(0);
             if (schema instanceof SchemaObject) {
                 SchemaObject object = (SchemaObject) schema;
-                Assert.assertEquals(SchemaTypes.OBJECT, object.type);
-                Assert.assertEquals(4, object.properties.size());
-                Assert.assertEquals(3, object.required.size());
+                assertThat(object.type).isEqualTo(SchemaTypes.OBJECT);
+                assertThat(object.properties).hasSize(4);
+                assertThat(object.required).hasSize(3);
 
-                Assert.assertEquals("id", object.required.get(0));
-                Assert.assertEquals("code", object.required.get(1));
-                Assert.assertEquals("name", object.required.get(2));
+                assertThat(object.required.get(0)).isEqualTo("id");
+                assertThat(object.required.get(1)).isEqualTo("code");
+                assertThat(object.required.get(2)).isEqualTo("name");
 
                 Property thirdProp = object.properties.get(3);
-                Assert.assertEquals("kpi", thirdProp.name);
+                assertThat(thirdProp.name).isEqualTo("kpi");
                 Schema oneOfSchema = thirdProp.schema;
                 if (oneOfSchema instanceof SchemaOneOf) {
                     SchemaOneOf oneOf = (SchemaOneOf) oneOfSchema;
-                    Assert.assertEquals(SchemaTypes.ONE_OF, oneOf.type);
-                    Assert.assertEquals(2, oneOf.types.size());
-                    Assert.assertEquals(SchemaTypes.REF, oneOf.types.get(0).type);
-                    Assert.assertEquals(SchemaTypes.STRING, oneOf.types.get(1).type);
-                }else {
+                    assertThat(oneOf.type).isEqualTo(SchemaTypes.ONE_OF);
+                    assertThat(oneOf.types).hasSize(2);
+                    assertThat(oneOf.types.get(0).type).isEqualTo(SchemaTypes.REF);
+                    assertThat(oneOf.types.get(1).type).isEqualTo(SchemaTypes.STRING);
+                } else {
                     Assert.fail("3rd definition is not of type OneOf!");
                 }
             }
 
-            Assert.assertEquals(1, spec.securitySchemes.size());
+            assertThat(spec.securitySchemes).hasSize(1);
         }
     }
 
@@ -72,11 +74,11 @@ public class WizardTest {
         File swaggerFile = new File(getClass().getResource("/uber.api").getPath());
         try (FileInputStream in = new FileInputStream(swaggerFile)) {
             ApiSpecification spec = tested.generateSpecification(in);
-            Assert.assertEquals("Uber API", spec.title);
-            Assert.assertEquals("Move your app forward with the Uber API", spec.description);
-            Assert.assertEquals("1.0.0", spec.version);
-            Assert.assertEquals(5, spec.resources.size());
-            Assert.assertEquals(6, spec.definitions.size());
+            assertThat(spec.title).isEqualTo("Uber API");
+            assertThat(spec.description).isEqualTo("Move your app forward with the Uber API");
+            assertThat(spec.version).isEqualTo("1.0.0");
+            assertThat(spec.resources).hasSize(5);
+            assertThat(spec.definitions).hasSize(6);
         }
     }
 
@@ -85,12 +87,12 @@ public class WizardTest {
         File swaggerFile = new File(getClass().getResource("/heroku-pets.api").getPath());
         try (FileInputStream in = new FileInputStream(swaggerFile)) {
             ApiSpecification spec = tested.generateSpecification(in);
-            Assert.assertEquals("PetStore on Heroku", spec.title);
-            Assert.assertEquals("Must be filled", spec.description);
-            Assert.assertEquals("1.0.0", spec.version);
-            Assert.assertEquals(4, spec.resources.size());
-            Assert.assertEquals("/pet", spec.resources.get(0).uri);
-            Assert.assertEquals(1, spec.definitions.size());
+            assertThat(spec.title).isEqualTo("PetStore on Heroku");
+            assertThat(spec.description).isEqualTo("Must be filled");
+            assertThat(spec.version).isEqualTo("1.0.0");
+            assertThat(spec.resources).hasSize(4);
+            assertThat(spec.resources.get(0).uri).isEqualTo("/pet");
+            assertThat(spec.definitions).hasSize(1);
         }
     }
 
