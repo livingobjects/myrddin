@@ -1,5 +1,7 @@
 package com.livingobjects.myrddin;
 
+import com.livingobjects.myrddin.schema.Schema;
+
 public final class Property {
 
     public final String name;

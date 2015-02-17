@@ -1,8 +1,8 @@
-package com.livingobjects.myrddin;
+package com.livingobjects.myrddin.schema;
 
 public enum SchemaTypes {
 
-    REF("$ref"), NUMBER("number"), INTEGER("integer"), STRING("string"), BOOLEAN("boolean"), OBJECT("object"), ARRAY("array");
+    REF("$ref"), NUMBER("number"), INTEGER("integer"), STRING("string"), BOOLEAN("boolean"), OBJECT("object"), ARRAY("array"), ANY_OF("anyOf"), ONE_OF("oneOf");
 
     public final String value;
 

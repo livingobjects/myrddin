@@ -1,12 +1,17 @@
 package com.livingobjects.myrddin;
 
 import com.livingobjects.myrddin.exception.SwaggerException;
-import org.junit.Assert;
+import com.livingobjects.myrddin.schema.Schema;
+import com.livingobjects.myrddin.schema.SchemaObject;
+import com.livingobjects.myrddin.schema.SchemaOneOf;
+import com.livingobjects.myrddin.schema.SchemaTypes;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class WizardTest {
 
@@ -17,18 +22,43 @@ public class WizardTest {
         File swaggerFile = new File(getClass().getResource("/test.api").getPath());
         try (FileInputStream in = new FileInputStream(swaggerFile)) {
             ApiSpecification spec = tested.generateSpecification(in);
-            Assert.assertEquals("Test API", spec.title);
-            Assert.assertEquals("Testing API", spec.description);
-            Assert.assertEquals("1", spec.version);
+            assertThat(spec.title).isEqualTo("Test API");
+            assertThat(spec.description).isEqualTo("Testing API");
+            assertThat(spec.version).isEqualTo("1");
 
-            Assert.assertEquals(1, spec.resources.size());
+            assertThat(spec.resources).hasSize(2);
             ApiResource apiResource = spec.resources.get(0);
-            Assert.assertEquals("/test/domains", apiResource.uri);
-            Assert.assertEquals("GET", apiResource.method);
-            Assert.assertEquals("privateAuthentication", apiResource.security.get(0).securityScheme);
+            assertThat(apiResource.uri).isEqualTo("/test/domains");
+            assertThat(apiResource.method).isEqualTo("GET");
 
-            Assert.assertEquals(2, spec.models.size());
-            Assert.assertEquals(1, spec.securitySchemes.size());
+            ApiResource apiResource2 = spec.resources.get(1);
+            assertThat(apiResource2.uri).isEqualTo("/test/domains/{domainId}");
+            assertThat(apiResource2.method).isEqualTo("POST");
+
+            assertThat(apiResource.security.get(0).securityScheme).isEqualTo("privateAuthentication");
+
+            assertThat(spec.definitions).hasSize(4);
+
+            Schema schema = spec.definitions.get(0);
+            SchemaObject object = (SchemaObject) schema;
+            assertThat(object.type).isEqualTo(SchemaTypes.OBJECT);
+            assertThat(object.properties).hasSize(4);
+            assertThat(object.required).hasSize(3);
+
+            assertThat(object.required.get(0)).isEqualTo("id");
+            assertThat(object.required.get(1)).isEqualTo("code");
+            assertThat(object.required.get(2)).isEqualTo("name");
+
+            Property thirdProp = object.properties.get(3);
+            assertThat(thirdProp.name).isEqualTo("kpi");
+            Schema oneOfSchema = thirdProp.schema;
+            SchemaOneOf oneOf = (SchemaOneOf) oneOfSchema;
+            assertThat(oneOf.type).isEqualTo(SchemaTypes.ONE_OF);
+            assertThat(oneOf.types).hasSize(2);
+            assertThat(oneOf.types.get(0).type).isEqualTo(SchemaTypes.REF);
+            assertThat(oneOf.types.get(1).type).isEqualTo(SchemaTypes.STRING);
+
+            assertThat(spec.securitySchemes).hasSize(1);
         }
     }
 
@@ -37,11 +67,11 @@ public class WizardTest {
         File swaggerFile = new File(getClass().getResource("/uber.api").getPath());
         try (FileInputStream in = new FileInputStream(swaggerFile)) {
             ApiSpecification spec = tested.generateSpecification(in);
-            Assert.assertEquals("Uber API", spec.title);
-            Assert.assertEquals("Move your app forward with the Uber API", spec.description);
-            Assert.assertEquals("1.0.0", spec.version);
-            Assert.assertEquals(5, spec.resources.size());
-            Assert.assertEquals(6, spec.models.size());
+            assertThat(spec.title).isEqualTo("Uber API");
+            assertThat(spec.description).isEqualTo("Move your app forward with the Uber API");
+            assertThat(spec.version).isEqualTo("1.0.0");
+            assertThat(spec.resources).hasSize(5);
+            assertThat(spec.definitions).hasSize(6);
         }
     }
 
@@ -50,11 +80,12 @@ public class WizardTest {
         File swaggerFile = new File(getClass().getResource("/heroku-pets.api").getPath());
         try (FileInputStream in = new FileInputStream(swaggerFile)) {
             ApiSpecification spec = tested.generateSpecification(in);
-            Assert.assertEquals("PetStore on Heroku", spec.title);
-            Assert.assertEquals("Must be filled", spec.description);
-            Assert.assertEquals("1.0.0", spec.version);
-            Assert.assertEquals(4, spec.resources.size());
-            Assert.assertEquals(1, spec.models.size());
+            assertThat(spec.title).isEqualTo("PetStore on Heroku");
+            assertThat(spec.description).isEqualTo("Must be filled");
+            assertThat(spec.version).isEqualTo("1.0.0");
+            assertThat(spec.resources).hasSize(4);
+            assertThat(spec.resources.get(0).uri).isEqualTo("/pet");
+            assertThat(spec.definitions).hasSize(1);
         }
     }
 
