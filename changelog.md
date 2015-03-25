@@ -1,4 +1,4 @@
 # Changelog
 
-# 1.4 
+# 1.5 
  * First sonatype public release
