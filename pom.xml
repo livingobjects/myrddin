@@ -17,7 +17,7 @@
 
     <groupId>com.livingobjects.myrddin</groupId>
     <artifactId>myrddin</artifactId>
-    <version>1.4</version>
+    <version>1.5-SNAPSHOT</version>
 
     <packaging>bundle</packaging>
 
